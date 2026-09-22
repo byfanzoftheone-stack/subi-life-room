@@ -49,7 +49,7 @@
   <div id="gate">
     <div class="card">
       <h2>OFFLINE RACE</h2>
-      <p>Chase cam on the wing. Gas sends the Subi away from you.</p>
+      <p>Bigger track. Subi raycasts onto the asphalt and rides the ramps.</p>
       <button id="go">START</button>
     </div>
   </div>
@@ -69,11 +69,11 @@
     document.getElementById('stage').appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x041018);
-    scene.fog = new THREE.Fog(0x041018, 70, 240);
-    const camera = new THREE.PerspectiveCamera(68, innerWidth/innerHeight, 0.1, 500);
+    scene.fog = new THREE.Fog(0x041018, 90, 320);
+    const camera = new THREE.PerspectiveCamera(68, innerWidth/innerHeight, 0.1, 600);
     scene.add(new THREE.AmbientLight(0xc0d8ff, 0.9));
     const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-    sun.position.set(30, 60, 20);
+    sun.position.set(30, 80, 20);
     scene.add(sun);
     function fit(root, size){
       const box = new THREE.Box3().setFromObject(root);
@@ -86,9 +86,7 @@
     }
     function lockTrack(root){
       root.rotation.set(0,0,0);
-      root.updateMatrix();
-      root.matrixAutoUpdate = false;
-      root.traverse(o => { o.matrixAutoUpdate = false; if (o !== root) o.updateMatrix(); });
+      root.updateMatrixWorld(true);
     }
     function loadGLB(url){
       return new Promise((res,rej)=> new GLTFLoader().load(url, g=>res(g.scene), undefined, rej));
@@ -103,7 +101,7 @@
     }
     function makeFallbackTrack(){
       const g = new THREE.Group();
-      const ring = new THREE.Mesh(new THREE.RingGeometry(26, 40, 96), new THREE.MeshStandardMaterial({color:0x101820, metalness:.2, roughness:.8, side:THREE.DoubleSide}));
+      const ring = new THREE.Mesh(new THREE.RingGeometry(40, 62, 96), new THREE.MeshStandardMaterial({color:0x101820, metalness:.2, roughness:.8, side:THREE.DoubleSide}));
       ring.rotation.x = -Math.PI/2; g.add(ring);
       return g;
     }
@@ -113,25 +111,59 @@
     scene.add(carWrap);
     let track = makeFallbackTrack();
     scene.add(track);
-    lockTrack(track);
-    const s = { pos: new THREE.Vector3(0,0,33), rot: 0, speed: 0, idleTime: 0, idleAngle: 0 };
+    const down = new THREE.Vector3(0,-1,0);
+    const ray = new THREE.Raycaster();
+    ray.far = 220;
+    const nWorld = new THREE.Vector3();
+    const fwd = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    const basis = new THREE.Matrix4();
+    function hitTrack(x, z, fromY){
+      ray.set(new THREE.Vector3(x, fromY, z), down);
+      const hits = ray.intersectObject(track, true);
+      for (const h of hits){
+        if (!h.face) continue;
+        nWorld.copy(h.face.normal).transformDirection(h.object.matrixWorld).normalize();
+        if (nWorld.y > 0.28) return h;
+      }
+      return null;
+    }
+    function snapToAsphalt(x, z, fallbackY){
+      const h = hitTrack(x, z, 160) || hitTrack(x, z, 40);
+      if (!h) return { y: fallbackY, n: new THREE.Vector3(0,1,0), on:false };
+      nWorld.copy(h.face.normal).transformDirection(h.object.matrixWorld).normalize();
+      return { y: h.point.y, n: nWorld.clone(), on:true };
+    }
+    function findSpawn(){
+      const tries = [[0,18],[0,28],[0,38],[12,22],[-12,22],[18,8],[-18,8],[0,8],[8,-12]];
+      for (const [x,z] of tries){
+        const p = snapToAsphalt(x,z,0);
+        if (p.on) return {x,z,y:p.y};
+      }
+      return {x:0,z:28,y:0};
+    }
+    const s = { pos: new THREE.Vector3(0,0,28), rot: 0, speed: 0, idleTime: 0, idleAngle: 0, onTrack:false };
     const targetQuat = new THREE.Quaternion();
     const euler = new THREE.Euler(0,0,0,'YXZ');
     async function mountAssets(){
       hud.textContent = 'LOADING MESHY GLBS';
       try {
         const race = await loadGLB('/glbs/neon-wave-raceway.glb');
-        fit(race, 92);
+        fit(race, 150);
         lockTrack(race);
         scene.remove(track); track = race; scene.add(track);
+        track.updateMatrixWorld(true);
       } catch {}
       try {
         const subi = await loadGLB('/glbs/blue-speedster.glb');
-        fit(subi, 4.4);
+        fit(subi, 5.2);
         subi.rotation.y = Math.PI/2;
         carWrap.remove(carMesh); carMesh = subi; carWrap.add(carMesh);
-        hud.textContent = 'TAIL CHASE · CAM 45L';
-      } catch { hud.textContent = 'TAIL CHASE'; }
+      } catch {}
+      const spawn = findSpawn();
+      s.pos.set(spawn.x, spawn.y, spawn.z);
+      carWrap.position.copy(s.pos);
+      hud.textContent = 'ON TRACK · TAIL CHASE';
     }
     mountAssets();
     function bind(el){
@@ -157,10 +189,11 @@
     document.getElementById('go').onclick = () => {
       document.getElementById('gate').style.display='none';
       running = true; dist = 0;
-      s.pos.set(0,0,33); s.rot=0; s.speed=0; s.idleTime=0; s.idleAngle=0;
+      const spawn = findSpawn();
+      s.pos.set(spawn.x, spawn.y, spawn.z); s.rot=0; s.speed=0; s.idleTime=0; s.idleAngle=0;
     };
     const GAS=45, BRAKE=40, REVERSE=18, DRAG=0.91, TURN=1.6, DRIFT_TURN=TURN*2.4;
-    const CAM_DIST=22, CAM_H=8, LOOK=12, ORBIT=Math.PI+Math.PI/4;
+    const CAM_DIST=24, CAM_H=9, LOOK=14, ORBIT=Math.PI+Math.PI/4;
     let last = performance.now();
     function tick(now){
       const delta = Math.min(0.033, (now-last)/1000); last = now;
@@ -184,31 +217,46 @@
         }
         s.pos.x += Math.sin(s.rot) * s.speed * delta;
         s.pos.z += Math.cos(s.rot) * s.speed * delta;
+        const surface = snapToAsphalt(s.pos.x, s.pos.z, s.pos.y);
+        s.onTrack = surface.on;
+        if (surface.on) s.pos.y += (surface.y - s.pos.y) * 0.35;
         if (Math.abs(s.speed) < 0.5 && !turning) s.idleTime += delta;
         dist += Math.abs(s.speed) * delta;
         const bestNow = Math.max(best0, Math.floor(dist));
         localStorage.setItem('subi-best', String(bestNow));
         scoreEl.innerHTML = Math.floor(dist) + '<br><span style="color:#8ea6b8">BEST '+bestNow+'</span>';
+        hud.textContent = surface.on ? 'ON ASPHALT · TAIL CHASE' : 'OFF TRACK · FIND THE RAMP';
+        fwd.set(Math.sin(s.rot), 0, Math.cos(s.rot));
+        if (surface.on && surface.n.y > 0.35) {
+          right.crossVectors(surface.n, fwd).normalize();
+          fwd.crossVectors(right, surface.n).normalize();
+          basis.makeBasis(right, surface.n, fwd);
+          targetQuat.setFromRotationMatrix(basis);
+        } else {
+          euler.y = s.rot;
+          targetQuat.setFromEuler(euler);
+        }
+      } else {
+        euler.y = s.rot;
+        targetQuat.setFromEuler(euler);
       }
       const isIdle = running && s.idleTime > 3;
-      const bounceY = isIdle ? Math.sin(Date.now() * 0.003) * 0.4 : 0;
-      carWrap.position.set(s.pos.x, bounceY, s.pos.z);
-      euler.y = s.rot;
-      targetQuat.setFromEuler(euler);
+      const bounceY = isIdle ? Math.sin(Date.now() * 0.003) * 0.15 : 0;
+      carWrap.position.set(s.pos.x, s.pos.y + bounceY, s.pos.z);
       carWrap.quaternion.slerp(targetQuat, 0.18);
       if (isIdle) {
         s.idleAngle += delta * 0.4;
         camera.position.x += (s.pos.x + Math.sin(s.idleAngle) * 20 - camera.position.x) * 0.05;
-        camera.position.y += (8 - camera.position.y) * 0.05;
+        camera.position.y += (s.pos.y + 8 - camera.position.y) * 0.05;
         camera.position.z += (s.pos.z + Math.cos(s.idleAngle) * 20 - camera.position.z) * 0.05;
       } else {
         s.idleAngle = 0;
         const bear = s.rot + ORBIT;
         camera.position.x += (s.pos.x + Math.sin(bear) * CAM_DIST - camera.position.x) * 0.1;
-        camera.position.y += (CAM_H - camera.position.y) * 0.1;
+        camera.position.y += (s.pos.y + CAM_H - camera.position.y) * 0.1;
         camera.position.z += (s.pos.z + Math.cos(bear) * CAM_DIST - camera.position.z) * 0.1;
       }
-      camera.lookAt(s.pos.x + Math.sin(s.rot) * LOOK, 1, s.pos.z + Math.cos(s.rot) * LOOK);
+      camera.lookAt(s.pos.x + Math.sin(s.rot) * LOOK, s.pos.y + 1.1, s.pos.z + Math.cos(s.rot) * LOOK);
       renderer.render(scene, camera);
       requestAnimationFrame(tick);
     }
