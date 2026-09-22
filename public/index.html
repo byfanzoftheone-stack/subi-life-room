@@ -29,7 +29,7 @@
 </head>
 <body>
   <header>
-    <div><small>OWN SPACE · OFFLINE MODE</small><h1>SUBI LIFE</h1></div>
+    <div><small>CITY DRIVE KIT</small><h1>SUBI LIFE</h1></div>
     <div style="text-align:right;font-size:11px;color:#b7c9d8">tribute · not the real STI</div>
   </header>
   <div id="hud">BOOTING TRACK</div>
@@ -49,7 +49,7 @@
   <div id="gate">
     <div class="card">
       <h2>OFFLINE RACE</h2>
-      <p>Chase cam sits 45 degrees left of the rear bumper. Car stays center.</p>
+      <p>Same drive kit as Agentic City. Drift bites harder. Camera hangs 45° left of the rear.</p>
       <button id="go">START</button>
     </div>
   </div>
@@ -71,9 +71,9 @@
     scene.background = new THREE.Color(0x041018);
     scene.fog = new THREE.Fog(0x041018, 70, 240);
     const camera = new THREE.PerspectiveCamera(68, innerWidth/innerHeight, 0.1, 500);
-    scene.add(new THREE.AmbientLight(0x9ec8ff, 0.75));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.15);
-    sun.position.set(8, 20, 6);
+    scene.add(new THREE.AmbientLight(0xc0d8ff, 0.9));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(30, 60, 20);
     scene.add(sun);
     function fit(root, size){
       const box = new THREE.Box3().setFromObject(root);
@@ -114,7 +114,9 @@
     let track = makeFallbackTrack();
     scene.add(track);
     lockTrack(track);
-    const state = {x:0,z:33,rot:0,speed:0};
+    const s = { pos: new THREE.Vector3(0,0,33), rot: 0, speed: 0, idleTime: 0, idleAngle: 0 };
+    const targetQuat = new THREE.Quaternion();
+    const euler = new THREE.Euler(0,0,0,'YXZ');
     async function mountAssets(){
       hud.textContent = 'LOADING MESHY GLBS';
       try {
@@ -128,8 +130,8 @@
         fit(subi, 4.4);
         subi.rotation.y = -Math.PI/2;
         carWrap.remove(carMesh); carMesh = subi; carWrap.add(carMesh);
-        hud.textContent = 'CAM 45L · REAR QUARTER';
-      } catch { hud.textContent = 'CAM 45L'; }
+        hud.textContent = 'CITY DRIVE · CAM 45L';
+      } catch { hud.textContent = 'CITY DRIVE'; }
     }
     mountAssets();
     function bind(el){
@@ -155,38 +157,58 @@
     document.getElementById('go').onclick = () => {
       document.getElementById('gate').style.display='none';
       running = true; dist = 0;
-      state.x=0; state.z=33; state.rot=0; state.speed=0;
+      s.pos.set(0,0,33); s.rot=0; s.speed=0; s.idleTime=0; s.idleAngle=0;
     };
-    const CAM_DIST = 16.5, CAM_H = 5.4, LOOK_AHEAD = 8, CAM_ORBIT = Math.PI + Math.PI/4;
+    const GAS=45, BRAKE=40, REVERSE=18, DRAG=0.91, TURN=1.6, DRIFT_TURN=TURN*2.4;
+    const CAM_DIST=22, CAM_H=8, LOOK=12, ORBIT=Math.PI+Math.PI/4;
     let last = performance.now();
     function tick(now){
-      const dt = Math.min(0.033, (now-last)/1000); last = now;
+      const delta = Math.min(0.033, (now-last)/1000); last = now;
       if(running){
-        const GAS=42, BRAKE=38, REV=16, DRAG=0.91, TURN=1.7;
-        if(KEYS.fwd) state.speed = Math.min(state.speed + GAS*dt, 68);
-        else if(KEYS.back){
-          if(state.speed>1) state.speed = Math.max(state.speed - BRAKE*dt, 0);
-          else state.speed = Math.max(state.speed - REV*dt, -16);
-        } else state.speed *= DRAG;
-        if(Math.abs(state.speed)>0.4 && (KEYS.left||KEYS.right)){
-          const dir = state.speed>0?1:-1;
-          const rate = KEYS.drift ? TURN*2.3 : TURN;
-          if(KEYS.left) state.rot += rate*dt*dir;
-          if(KEYS.right) state.rot -= rate*dt*dir;
+        if (KEYS.fwd) { s.speed = Math.min(s.speed + GAS * delta, 75); s.idleTime = 0; }
+        else if (KEYS.back) {
+          if (s.speed > 1) s.speed = Math.max(s.speed - BRAKE * delta, 0);
+          else s.speed = Math.max(s.speed - REVERSE * delta, -20);
+          s.idleTime = 0;
+        } else {
+          s.speed *= DRAG;
+          if (Math.abs(s.speed) < 0.05) s.speed = 0;
         }
-        state.x += Math.sin(state.rot)*state.speed*dt;
-        state.z += Math.cos(state.rot)*state.speed*dt;
-        dist += Math.abs(state.speed)*dt;
+        const turning = KEYS.left || KEYS.right;
+        if (Math.abs(s.speed) > 0.5 && turning) {
+          const steerDir = s.speed > 0 ? 1 : -1;
+          const turnRate = KEYS.drift ? DRIFT_TURN : TURN;
+          if (KEYS.left) s.rot += turnRate * delta * steerDir;
+          if (KEYS.right) s.rot -= turnRate * delta * steerDir;
+          s.idleTime = 0;
+        }
+        s.pos.x += Math.sin(s.rot) * s.speed * delta;
+        s.pos.z += Math.cos(s.rot) * s.speed * delta;
+        if (Math.abs(s.speed) < 0.5 && !turning) s.idleTime += delta;
+        dist += Math.abs(s.speed) * delta;
         const bestNow = Math.max(best0, Math.floor(dist));
         localStorage.setItem('subi-best', String(bestNow));
         scoreEl.innerHTML = Math.floor(dist) + '<br><span style="color:#8ea6b8">BEST '+bestNow+'</span>';
       }
-      carWrap.position.set(state.x, 0, state.z);
-      carWrap.rotation.y = state.rot;
-      const bear = state.rot + CAM_ORBIT;
-      const fx = Math.sin(state.rot), fz = Math.cos(state.rot);
-      camera.position.set(state.x + Math.sin(bear)*CAM_DIST, CAM_H, state.z + Math.cos(bear)*CAM_DIST);
-      camera.lookAt(state.x + fx*LOOK_AHEAD, 1.05, state.z + fz*LOOK_AHEAD);
+      const isIdle = running && s.idleTime > 3;
+      const bounceY = isIdle ? Math.sin(Date.now() * 0.003) * 0.4 : 0;
+      carWrap.position.set(s.pos.x, bounceY, s.pos.z);
+      euler.y = s.rot;
+      targetQuat.setFromEuler(euler);
+      carWrap.quaternion.slerp(targetQuat, 0.18);
+      if (isIdle) {
+        s.idleAngle += delta * 0.4;
+        camera.position.x += (s.pos.x + Math.sin(s.idleAngle) * 20 - camera.position.x) * 0.05;
+        camera.position.y += (8 - camera.position.y) * 0.05;
+        camera.position.z += (s.pos.z + Math.cos(s.idleAngle) * 20 - camera.position.z) * 0.05;
+      } else {
+        s.idleAngle = 0;
+        const bear = s.rot + ORBIT;
+        camera.position.x += (s.pos.x + Math.sin(bear) * CAM_DIST - camera.position.x) * 0.1;
+        camera.position.y += (CAM_H - camera.position.y) * 0.1;
+        camera.position.z += (s.pos.z + Math.cos(bear) * CAM_DIST - camera.position.z) * 0.1;
+      }
+      camera.lookAt(s.pos.x + Math.sin(s.rot) * LOOK, 1, s.pos.z + Math.cos(s.rot) * LOOK);
       renderer.render(scene, camera);
       requestAnimationFrame(tick);
     }
