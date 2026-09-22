@@ -49,7 +49,7 @@
   <div id="gate">
     <div class="card">
       <h2>OFFLINE RACE</h2>
-      <p>Same drive kit as Agentic City. Drift bites harder. Camera hangs 45° left of the rear.</p>
+      <p>Chase cam on the wing. Gas sends the Subi away from you.</p>
       <button id="go">START</button>
     </div>
   </div>
@@ -128,10 +128,10 @@
       try {
         const subi = await loadGLB('/glbs/blue-speedster.glb');
         fit(subi, 4.4);
-        subi.rotation.y = -Math.PI/2;
+        subi.rotation.y = Math.PI/2;
         carWrap.remove(carMesh); carMesh = subi; carWrap.add(carMesh);
-        hud.textContent = 'CITY DRIVE · CAM 45L';
-      } catch { hud.textContent = 'CITY DRIVE'; }
+        hud.textContent = 'TAIL CHASE · CAM 45L';
+      } catch { hud.textContent = 'TAIL CHASE'; }
     }
     mountAssets();
     function bind(el){
