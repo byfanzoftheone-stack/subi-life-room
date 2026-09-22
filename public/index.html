@@ -49,7 +49,7 @@
   <div id="gate">
     <div class="card">
       <h2>OFFLINE RACE</h2>
-      <p>Track stays locked. Camera hangs off the rear-right. Car stays center screen.</p>
+      <p>Camera sits behind the wing. Track stays locked. Car stays center screen.</p>
       <button id="go">START</button>
     </div>
   </div>
@@ -70,9 +70,9 @@
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x041018);
     scene.fog = new THREE.Fog(0x041018, 70, 240);
-    const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.1, 500);
-    camera.position.set(4, 8, 16);
-    scene.add(new THREE.AmbientLight(0x9ec8ff, 0.7));
+    const camera = new THREE.PerspectiveCamera(68, innerWidth/innerHeight, 0.1, 500);
+    camera.position.set(1.4, 6, 20);
+    scene.add(new THREE.AmbientLight(0x9ec8ff, 0.75));
     const sun = new THREE.DirectionalLight(0xffffff, 1.15);
     sun.position.set(8, 20, 6);
     scene.add(sun);
@@ -143,8 +143,9 @@
       try {
         const subi = await loadGLB('/glbs/blue-speedster.glb');
         fit(subi, 4.4);
+        subi.rotation.y = -Math.PI/2;
         carWrap.remove(carMesh); carMesh = subi; carWrap.add(carMesh);
-        hud.textContent = (hud.textContent.includes('LOCKED')?'MESHY SUBI + TRACK LOCKED':'MESHY SUBI READY');
+        hud.textContent = 'REAR CAM · MESHY READY';
       } catch {}
     }
     mountAssets();
@@ -173,7 +174,7 @@
       running = true; dist = 0;
       state.x=0; state.z=33; state.rot=0; state.speed=0;
     };
-    const CAM_BACK = 13.5, CAM_RIGHT = 3.4, CAM_H = 6.8, LOOK_AHEAD = 2.2;
+    const CAM_BACK = 17.5, CAM_RIGHT = 1.55, CAM_H = 5.2, LOOK_AHEAD = 7;
     let last = performance.now();
     function tick(now){
       const dt = Math.min(0.033, (now-last)/1000); last = now;
