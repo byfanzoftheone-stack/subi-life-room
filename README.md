@@ -1,2 +1,7 @@
-# subi-life-room
-SUBI LIFE room inside THE ONE Agentic City — World Rally Blue 2008 WRX STI tribute showroom. Standalone deploy.
+# SUBI LIFE Room
+
+World Rally Blue 2008 Subaru Impreza WRX STI tribute room for THE ONE Agentic City.
+
+This is a digital imitation for showing the real STI owner. It is not the car.
+
+Open `index.html` or the live Vercel URL.
