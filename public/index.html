@@ -49,7 +49,7 @@
   <div id="gate">
     <div class="card">
       <h2>OFFLINE RACE</h2>
-      <p>Chrome dino energy. No login. Drive the Subi on Neon Wave Raceway. Score is distance. Best score stays on this phone.</p>
+      <p>Track stays locked. Camera hangs off the rear-right. Car stays center screen.</p>
       <button id="go">START</button>
     </div>
   </div>
@@ -69,9 +69,9 @@
     document.getElementById('stage').appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x041018);
-    scene.fog = new THREE.Fog(0x041018, 40, 160);
-    const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.1, 400);
-    camera.position.set(0, 8, 18);
+    scene.fog = new THREE.Fog(0x041018, 70, 240);
+    const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.1, 500);
+    camera.position.set(4, 8, 16);
     scene.add(new THREE.AmbientLight(0x9ec8ff, 0.7));
     const sun = new THREE.DirectionalLight(0xffffff, 1.15);
     sun.position.set(8, 20, 6);
@@ -86,6 +86,12 @@
       const k = size/max;
       root.scale.setScalar(k);
       root.position.set(-c.x*k, -box.min.y*k, -c.z*k);
+    }
+    function lockTrack(root){
+      root.rotation.set(0,0,0);
+      root.updateMatrix();
+      root.matrixAutoUpdate = false;
+      root.traverse(o => { o.matrixAutoUpdate = false; if (o !== root) o.updateMatrix(); });
     }
     function loadGLB(url){
       return new Promise((res,rej)=> new GLTFLoader().load(url, g=>res(g.scene), undefined, rej));
@@ -104,14 +110,14 @@
     }
     function makeFallbackTrack(){
       const g = new THREE.Group();
-      const ring = new THREE.Mesh(new THREE.RingGeometry(18, 28, 96), new THREE.MeshStandardMaterial({color:0x101820, metalness:.2, roughness:.8, side:THREE.DoubleSide}));
+      const ring = new THREE.Mesh(new THREE.RingGeometry(26, 40, 96), new THREE.MeshStandardMaterial({color:0x101820, metalness:.2, roughness:.8, side:THREE.DoubleSide}));
       ring.rotation.x = -Math.PI/2; g.add(ring);
-      const line = new THREE.Mesh(new THREE.RingGeometry(22.7, 23.3, 96), new THREE.MeshBasicMaterial({color:0xffd24a, side:THREE.DoubleSide}));
+      const line = new THREE.Mesh(new THREE.RingGeometry(32.6, 33.4, 96), new THREE.MeshBasicMaterial({color:0xffd24a, side:THREE.DoubleSide}));
       line.rotation.x = -Math.PI/2; line.position.y = 0.02; g.add(line);
-      for(let i=0;i<18;i++){
-        const a = i/18*Math.PI*2;
-        const p = new THREE.Mesh(new THREE.BoxGeometry(.3,1.6,1.4), new THREE.MeshStandardMaterial({color:0xffd24a, emissive:0xffd24a, emissiveIntensity:.4}));
-        p.position.set(Math.sin(a)*28.4, .8, Math.cos(a)*28.4);
+      for(let i=0;i<22;i++){
+        const a = i/22*Math.PI*2;
+        const p = new THREE.Mesh(new THREE.BoxGeometry(.35,1.8,1.6), new THREE.MeshStandardMaterial({color:0xffd24a, emissive:0xffd24a, emissiveIntensity:.4}));
+        p.position.set(Math.sin(a)*40.6, .9, Math.cos(a)*40.6);
         g.add(p);
       }
       return g;
@@ -122,21 +128,23 @@
     scene.add(carWrap);
     let track = makeFallbackTrack();
     scene.add(track);
-    const state = {x:0,z:23,rot:0,speed:0};
+    lockTrack(track);
+    const state = {x:0,z:33,rot:0,speed:0};
     carWrap.position.set(state.x,0,state.z);
     async function mountAssets(){
       hud.textContent = 'LOADING MESHY GLBS';
       try {
         const race = await loadGLB('/glbs/neon-wave-raceway.glb');
-        fit(race, 64);
+        fit(race, 92);
+        lockTrack(race);
         scene.remove(track); track = race; scene.add(track);
-        hud.textContent = 'RACEWAY ONLINE';
-      } catch { hud.textContent = 'PROCEDURAL TRACK'; }
+        hud.textContent = 'RACEWAY LOCKED';
+      } catch { hud.textContent = 'PROCEDURAL TRACK LOCKED'; }
       try {
         const subi = await loadGLB('/glbs/blue-speedster.glb');
         fit(subi, 4.4);
         carWrap.remove(carMesh); carMesh = subi; carWrap.add(carMesh);
-        hud.textContent = (hud.textContent.includes('ONLINE')?'MESHY SUBI + TRACK':'MESHY SUBI') + ' READY';
+        hud.textContent = (hud.textContent.includes('LOCKED')?'MESHY SUBI + TRACK LOCKED':'MESHY SUBI READY');
       } catch {}
     }
     mountAssets();
@@ -163,8 +171,9 @@
     document.getElementById('go').onclick = () => {
       document.getElementById('gate').style.display='none';
       running = true; dist = 0;
-      state.x=0; state.z=23; state.rot=0; state.speed=0;
+      state.x=0; state.z=33; state.rot=0; state.speed=0;
     };
+    const CAM_BACK = 13.5, CAM_RIGHT = 3.4, CAM_H = 6.8, LOOK_AHEAD = 2.2;
     let last = performance.now();
     function tick(now){
       const dt = Math.min(0.033, (now-last)/1000); last = now;
@@ -190,12 +199,14 @@
       }
       carWrap.position.set(state.x, 0, state.z);
       carWrap.rotation.y = state.rot;
-      const camX = state.x - Math.sin(state.rot)*12;
-      const camZ = state.z - Math.cos(state.rot)*12;
-      camera.position.x += (camX - camera.position.x)*0.12;
-      camera.position.z += (camZ - camera.position.z)*0.12;
-      camera.position.y += (5.2 - camera.position.y)*0.08;
-      camera.lookAt(state.x + Math.sin(state.rot)*6, 1, state.z + Math.cos(state.rot)*6);
+      const fx = Math.sin(state.rot), fz = Math.cos(state.rot);
+      const rx = Math.cos(state.rot), rz = -Math.sin(state.rot);
+      camera.position.set(
+        state.x - fx*CAM_BACK + rx*CAM_RIGHT,
+        CAM_H,
+        state.z - fz*CAM_BACK + rz*CAM_RIGHT
+      );
+      camera.lookAt(state.x + fx*LOOK_AHEAD, 1.05, state.z + fz*LOOK_AHEAD);
       renderer.render(scene, camera);
       requestAnimationFrame(tick);
     }
