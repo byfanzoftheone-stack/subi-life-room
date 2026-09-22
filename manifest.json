@@ -1,0 +1,8 @@
+{
+  "name": "SUBI LIFE",
+  "short_name": "SUBI LIFE",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#041018",
+  "theme_color": "#041018"
+}
