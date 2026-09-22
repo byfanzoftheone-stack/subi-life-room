@@ -3,214 +3,105 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>SUBI LIFE · THE ONE Agentic City</title>
-  <meta name="description" content="World Rally Blue 2008 Subaru Impreza WRX STI tribute room inside THE ONE Agentic City." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <title>SUBI LIFE · Meshy GLB</title>
   <style>
-    :root {
-      --wrb: #0147a6;
-      --wrb-bright: #1b6fe0;
-      --gold: #d4a017;
-      --gold-hot: #ffd24a;
-      --cyan: #5be9ff;
-      --ink: #061018;
-      --glass: rgba(6, 16, 28, 0.72);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; background: #041018; color: #eef7ff; font-family: "DM Sans", system-ui, sans-serif; }
-    body {
-      min-height: 100dvh;
-      overflow-x: hidden;
-      background:
-        radial-gradient(1200px 600px at 50% -10%, rgba(27,111,224,.35), transparent 55%),
-        radial-gradient(800px 500px at 80% 110%, rgba(212,160,23,.16), transparent 50%),
-        linear-gradient(180deg, #071525 0%, #041018 55%, #02080d 100%);
-    }
-    .skyline {
-      position: fixed; inset: 0; pointer-events: none; z-index: 0;
-      background-image:
-        linear-gradient(rgba(91,233,255,.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(91,233,255,.05) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: radial-gradient(circle at 50% 70%, #000 35%, transparent 80%);
-    }
-    header {
-      position: relative; z-index: 4;
-      display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 12px; padding: 16px 16px 8px;
-    }
-    .brand { font-family: "Bebas Neue", sans-serif; letter-spacing: .08em; }
-    .brand small { display: block; font-family: "Space Mono", monospace; font-size: 10px; letter-spacing: .28em; color: var(--cyan); opacity: .8; }
-    .brand b { display: block; font-size: clamp(28px, 8vw, 52px); line-height: .9; color: var(--gold-hot); }
-    .note {
-      max-width: 240px; text-align: right;
-      font-size: 11px; line-height: 1.45; color: #b7c9d8;
-      border: 1px solid rgba(91,233,255,.25);
-      background: var(--glass); backdrop-filter: blur(12px);
-      padding: 8px 10px; border-radius: 12px;
-    }
-    .stage {
-      position: relative; z-index: 2;
-      min-height: 52vh;
-      display: grid; place-items: center;
-      padding: 8px 12px 0;
-    }
-    .pad {
-      width: min(920px, 100%);
-      aspect-ratio: 16/10;
-      max-height: 52vh;
-      position: relative;
-      border-radius: 28px;
-      background:
-        radial-gradient(ellipse at 50% 80%, rgba(27,111,224,.28), transparent 55%),
-        linear-gradient(180deg, rgba(8,22,40,.2), rgba(2,8,14,.7));
-      border: 1px solid rgba(91,233,255,.2);
-      box-shadow: inset 0 0 80px rgba(91,233,255,.08), 0 20px 60px rgba(0,0,0,.35);
-      overflow: hidden;
-    }
-    .floor {
-      position: absolute; left: 8%; right: 8%; bottom: 8%;
-      height: 28%;
-      background: radial-gradient(ellipse at 50% 40%, rgba(91,233,255,.22), transparent 70%);
-      border-radius: 100%;
-      filter: blur(2px);
-    }
-    .plate {
-      position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
-      font-family: "Bebas Neue", sans-serif; letter-spacing: .22em;
-      font-size: 14px; color: var(--gold-hot);
-      background: rgba(0,0,0,.55); border: 1px solid rgba(212,160,23,.5);
-      padding: 4px 12px; border-radius: 999px;
-    }
-    svg.car { width: 88%; height: 78%; position: absolute; left: 6%; top: 6%; filter: drop-shadow(0 18px 24px rgba(0,20,50,.55)); transition: transform .6s ease; }
-    .pad.spin svg.car { animation: yaw 8s linear infinite; }
-    @keyframes yaw {
-      0% { transform: scaleX(1); }
-      48% { transform: scaleX(.08); }
-      50% { transform: scaleX(-1); }
-      98% { transform: scaleX(-.08); }
-      100% { transform: scaleX(1); }
-    }
-    .gauges {
-      position: relative; z-index: 3;
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 8px; padding: 12px 16px 4px;
-    }
-    .g {
-      background: var(--glass); border: 1px solid rgba(91,233,255,.18);
-      border-radius: 14px; padding: 10px 8px; text-align: center;
-    }
-    .g em { display: block; font-style: normal; font-family: "Bebas Neue", sans-serif; font-size: 22px; color: var(--gold-hot); }
-    .g span { font-family: "Space Mono", monospace; font-size: 9px; letter-spacing: .16em; color: #8ea6b8; }
-    .specs {
-      position: relative; z-index: 3;
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 8px; padding: 8px 16px 16px;
-    }
-    .card {
-      background: var(--glass); border: 1px solid rgba(255,255,255,.08);
-      border-radius: 16px; padding: 12px;
-    }
-    .card h3 { font-family: "Space Mono", monospace; font-size: 10px; letter-spacing: .2em; color: var(--cyan); margin-bottom: 6px; }
-    .card p { font-size: 13px; line-height: 1.45; color: #d7e6f2; }
-    .actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 28px; position: relative; z-index: 3; }
-    button, .btn {
-      appearance: none; border: 0; cursor: pointer; text-decoration: none;
-      font-family: "Space Mono", monospace; font-size: 11px; letter-spacing: .12em;
-      padding: 12px 14px; border-radius: 999px; color: #041018; background: var(--gold-hot);
-    }
-    button.ghost, .btn.ghost { background: transparent; color: var(--cyan); border: 1px solid rgba(91,233,255,.4); }
-    .ok { color: #9ff2b0; font-family: "Space Mono", monospace; font-size: 11px; align-self: center; }
-    @media (max-width: 640px) {
-      header { flex-direction: column; }
-      .note { max-width: none; text-align: left; }
-      .gauges { grid-template-columns: repeat(2, 1fr); }
-      .specs { grid-template-columns: 1fr; }
-    }
+    html, body, #stage { margin: 0; height: 100%; background: #041018; color: #eef7ff; font-family: ui-monospace, monospace; }
+    header, footer { position: fixed; left: 14px; right: 14px; z-index: 5; }
+    header { top: 12px; display: flex; justify-content: space-between; gap: 12px; }
+    footer { bottom: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+    h1 { margin: 0; color: #ffd24a; font-size: 22px; letter-spacing: .08em; }
+    small { display: block; color: #5be9ff; letter-spacing: .2em; font-size: 9px; }
+    .note { max-width: 220px; text-align: right; font-size: 11px; color: #b7c9d8; }
+    button, a.btn { appearance: none; text-decoration: none; border: 0; cursor: pointer; padding: 10px 14px; border-radius: 999px; background: #ffd24a; color: #041018; font: 11px ui-monospace, monospace; letter-spacing: .12em; }
+    a.btn { background: transparent; color: #5be9ff; border: 1px solid #5be9ff66; }
+    #hud { position: fixed; left: 14px; top: 64px; font-size: 11px; color: #5be9ff; z-index: 5; }
   </style>
 </head>
 <body>
-  <div class="skyline"></div>
   <header>
-    <div class="brand">
+    <div>
       <small>THE ONE AGENTIC CITY · ROOM</small>
-      <b>SUBI LIFE</b>
+      <h1>SUBI LIFE</h1>
     </div>
-    <div class="note">Digital tribute / imitation of a 2008 Subaru Impreza WRX STI in World Rally Blue. Built to show the owner — not a claim on the real car.</div>
+    <div class="note">Meshy Blue Speedster GLB. Digital tribute — not the real STI.</div>
   </header>
-
-  <section class="stage">
-    <div class="pad spin" id="pad">
-      <div class="floor"></div>
-      <svg class="car" viewBox="0 0 800 420" aria-label="World Rally Blue 2008 WRX STI hatch tribute">
-        <defs>
-          <linearGradient id="paint" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0" stop-color="#2b86ff"/>
-            <stop offset=".45" stop-color="#0147a6"/>
-            <stop offset="1" stop-color="#062c6b"/>
-          </linearGradient>
-          <linearGradient id="gold" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stop-color="#ffe27a"/>
-            <stop offset="1" stop-color="#b8860b"/>
-          </linearGradient>
-        </defs>
-        <ellipse cx="400" cy="340" rx="250" ry="18" fill="rgba(91,233,255,.18)"/>
-        <path d="M118 262c18-38 62-78 128-92 18-28 62-58 126-62 86-6 148 22 176 48 38 8 86 28 114 58 16 18 28 36 22 48-80 12-478 14-566 0z" fill="url(#paint)" stroke="#8ec4ff" stroke-width="3"/>
-        <path d="M250 172c28-22 70-40 126-42 62-2 108 16 132 36-40 8-150 10-258 6z" fill="#0b1c33" opacity=".9"/>
-        <path d="M286 128c46-8 96-10 132 8 8 18-18 28-46 30-40 2-78-8-86-38z" fill="#0a1524"/>
-        <rect x="168" y="214" width="92" height="18" rx="4" fill="#0b0f14"/>
-        <rect x="538" y="214" width="78" height="16" rx="4" fill="#0b0f14"/>
-        <circle cx="214" cy="286" r="46" fill="#111" stroke="url(#gold)" stroke-width="8"/>
-        <circle cx="214" cy="286" r="16" fill="#c9a227"/>
-        <circle cx="586" cy="286" r="46" fill="#111" stroke="url(#gold)" stroke-width="8"/>
-        <circle cx="586" cy="286" r="16" fill="#c9a227"/>
-        <path d="M630 168c28 10 48 28 58 46-18 4-38 6-58 6-6-18-10-36 0-52z" fill="#0c2a5c"/>
-        <rect x="332" y="196" width="86" height="10" rx="3" fill="#081018"/>
-        <circle cx="156" cy="250" r="7" fill="#ffe9a8"/>
-        <circle cx="676" cy="248" r="6" fill="#ff6b3d"/>
-      </svg>
-      <div class="plate">SUBI LIFE · WRB STI</div>
-    </div>
-  </section>
-
-  <section class="gauges">
-    <div class="g"><em>305</em><span>HP · EJ257</span></div>
-    <div class="g"><em>6MT</em><span>CLOSE RATIO</span></div>
-    <div class="g"><em>AWD</em><span>DCCD</span></div>
-    <div class="g"><em>2008</em><span>GRB HATCH</span></div>
-  </section>
-
-  <section class="specs">
-    <div class="card">
-      <h3>THE ROOM</h3>
-      <p>This is the Subi Life district inside THE ONE Agentic City — a whole room, not a sticker on the plaza. Gold BBS look, hood scoop, STI wing, World Rally Blue paint.</p>
-    </div>
-    <div class="card">
-      <h3>FOR THE OWNER</h3>
-      <p>Built as an imitation you can open on a phone. The real STI stays the real STI. This is the digital twin tribute so it can live in the city.</p>
-    </div>
-  </section>
-
-  <div class="actions">
-    <button type="button" id="copy">COPY LINK</button>
-    <button type="button" class="ghost" id="spin">PAUSE / SPIN</button>
-    <a class="btn ghost" href="https://the-one-agentic-city.vercel.app" target="_blank" rel="noopener">CITY HUB</a>
-    <span class="ok" id="status"></span>
-  </div>
-
-  <script>
-    const pad = document.getElementById('pad');
-    document.getElementById('spin').onclick = () => pad.classList.toggle('spin');
-    document.getElementById('copy').onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        document.getElementById('status').textContent = 'LINK COPIED';
-      } catch {
-        document.getElementById('status').textContent = window.location.href;
+  <div id="hud">LOADING /glbs/blue-speedster.glb</div>
+  <div id="stage"></div>
+  <footer>
+    <button id="spin">PAUSE</button>
+    <a class="btn" href="https://the-one-agentic-city.vercel.app">CITY HUB</a>
+  </footer>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    const URLS = ['/glbs/blue-speedster.glb'];
+    const hud = document.getElementById('hud');
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    document.getElementById('stage').appendChild(renderer.domElement);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x041018);
+    const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 80);
+    camera.position.set(5.2, 2.2, 6.4);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1, 0);
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.8;
+    scene.add(new THREE.AmbientLight(0xc0d8ff, 0.8));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.3);
+    sun.position.set(6, 10, 4);
+    scene.add(sun);
+    scene.add(new THREE.PointLight(0x1b6fe0, 8, 18)).position.set(-4, 3, -2);
+    scene.add(new THREE.PointLight(0xffd700, 4, 12)).position.set(3, 2, 4);
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(8, 48), new THREE.MeshStandardMaterial({ color: 0x0a1a2c, metalness: 0.4, roughness: 0.35 }));
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+    function fit(root) {
+      const box = new THREE.Box3().setFromObject(root);
+      const size = new THREE.Vector3();
+      const cent = new THREE.Vector3();
+      box.getSize(size); box.getCenter(cent);
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      const s = 4.6 / maxDim;
+      root.scale.setScalar(s);
+      root.position.set(-cent.x * s, -box.min.y * s, -cent.z * s);
+    }
+    const loader = new GLTFLoader();
+    function tryLoad(i) {
+      if (i >= URLS.length) {
+        hud.textContent = 'DROP public/glbs/blue-speedster.glb THEN REFRESH';
+        return;
       }
+      loader.load(URLS[i], (gltf) => {
+        fit(gltf.scene);
+        scene.add(gltf.scene);
+        hud.textContent = 'MESHY SUBI ONLINE';
+      }, (ev) => {
+        if (ev.total) hud.textContent = 'LOADING ' + Math.round((ev.loaded / ev.total) * 100) + '%';
+      }, () => tryLoad(i + 1));
+    }
+    tryLoad(0);
+    document.getElementById('spin').onclick = () => {
+      controls.autoRotate = !controls.autoRotate;
+      document.getElementById('spin').textContent = controls.autoRotate ? 'PAUSE' : 'SPIN';
     };
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+    (function tick(){ controls.update(); renderer.render(scene, camera); requestAnimationFrame(tick); })();
   </script>
 </body>
 </html>
