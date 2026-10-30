@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#041018" />
+  <title>SUBI LIFE · OFFLINE RACE</title>
+  <link rel="manifest" href="/manifest.json" />
+  <style>
+    html,body,#stage{margin:0;height:100%;background:#041018;color:#eef7ff;font-family:ui-monospace,monospace;overflow:hidden;touch-action:none}
+    header{position:fixed;top:10px;left:12px;right:12px;z-index:6;display:flex;justify-content:space-between;gap:10px;pointer-events:none}
+    h1{margin:0;color:#ffd24a;font-size:20px;letter-spacing:.08em}
+    small{display:block;color:#5be9ff;letter-spacing:.18em;font-size:9px}
+    #hud{position:fixed;top:58px;left:12px;z-index:6;font-size:12px;color:#5be9ff}
+    #score{position:fixed;top:58px;right:12px;z-index:6;text-align:right;font-size:12px;color:#ffd24a}
+    #players{position:fixed;top:92px;right:12px;z-index:6;text-align:right;font-size:11px;color:#5be9ff}
+    #gate{position:fixed;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;background:rgba(4,16,24,.72)}
+    #gate .card{width:min(360px,92vw);background:#061820;border:1px solid #5be9ff44;border-radius:18px;padding:18px}
+    #gate h2{margin:0 0 8px;color:#ffd24a}
+    #gate p{margin:0 0 14px;color:#b7c9d8;font-size:13px;line-height:1.45}
+    button{appearance:none;border:0;cursor:pointer;padding:12px 16px;border-radius:999px;background:#ffd24a;color:#041018;font:12px ui-monospace,monospace;letter-spacing:.12em}
+    #pads{position:fixed;bottom:18px;left:12px;right:12px;z-index:7;display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none}
+    .col{display:flex;gap:8px;align-items:flex-end}
+    .pad{pointer-events:auto;width:72px;height:72px;border-radius:50%;border:2px solid #ffffff44;display:flex;align-items:center;justify-content:center;color:#fff;background:rgba(0,0,0,.45);user-select:none}
+    .pad.gold{border-color:#ffd24a;color:#ffd24a;width:82px;height:82px}
+    .pad.cyan{border-color:#5be9ff;color:#5be9ff;width:64px;height:44px;border-radius:10px}
+    .pad:active{background:#ffd24a33}
+  </style>
+</head>
+<body>
+  <header>
+    <div><small>CITY DRIVE KIT</small><h1>SUBI LIFE</h1></div>
+    <div style="text-align:right;font-size:11px;color:#b7c9d8">tribute · not the real STI</div>
+  </header>
+  <div id="hud">BOOTING TRACK</div>
+  <div id="score">0<br><span style="color:#8ea6b8">BEST 0</span></div>
+  <div id="players">OFFLINE</div>
+  <div id="stage"></div>
+  <div id="pads">
+    <div class="col">
+      <div class="pad" data-k="left">◀</div>
+      <div class="pad" data-k="right">▶</div>
+    </div>
+    <div class="col">
+      <div class="pad cyan" data-k="drift">DRIFT</div>
+      <div class="pad cyan" data-k="back">BRAKE</div>
+      <div class="pad gold" data-k="fwd">GAS</div>
+    </div>
+  </div>
+  <div id="gate">
+    <div class="card">
+      <h2>OFFLINE RACE</h2>
+      <p>Bigger track. Subi raycasts onto the asphalt and rides the ramps. Optional multiplayer when the server is up.</p>
+      <button id="go">START</button>
+    </div>
+  </div>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    const KEYS = {fwd:false,back:false,left:false,right:false,drift:false};
+    const hud = document.getElementById('hud');
+    const scoreEl = document.getElementById('score');
+    const playersEl = document.getElementById('players');
+    const best0 = Number(localStorage.getItem('subi-best')||0);
+    let running = false, dist = 0;
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    document.getElementById('stage').appendChild(renderer.domElement);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x041018);
+    scene.fog = new THREE.Fog(0x041018, 90, 320);
+    const camera = new THREE.PerspectiveCamera(68, innerWidth/innerHeight, 0.1, 600);
+    scene.add(new THREE.AmbientLight(0xc0d8ff, 0.9));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(30, 80, 20);
+    scene.add(sun);
+    function fit(root, size){
+      const box = new THREE.Box3().setFromObject(root);
+      const s = new THREE.Vector3(); const c = new THREE.Vector3();
+      box.getSize(s); box.getCenter(c);
+      const max = Math.max(s.x,s.y,s.z)||1;
+      const k = size/max;
+      root.scale.setScalar(k);
+      root.position.set(-c.x*k, -box.min.y*k, -c.z*k);
+    }
+    function lockTrack(root){
+      root.rotation.set(0,0,0);
+      root.updateMatrixWorld(true);
+    }
+    function loadGLB(url){
+      return new Promise((res,rej)=> new GLTFLoader().load(url, g=>res(g.scene), undefined, rej));
+    }
+    function makeFallbackCar(){
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.8,0.42,4.3), new THREE.MeshStandardMaterial({color:0x0147a6, metalness:.7, roughness:.22}));
+      body.position.y = 0.62; g.add(body);
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4,0.5,1.8), new THREE.MeshStandardMaterial({color:0x0b1a44, metalness:.3, roughness:.2}));
+      cabin.position.set(0,1.1,-0.3); g.add(cabin);
+      return g;
+    }
+    function makeFallbackTrack(){
+      const g = new THREE.Group();
+      const ring = new THREE.Mesh(new THREE.RingGeometry(40, 62, 96), new THREE.MeshStandardMaterial({color:0x101820, metalness:.2, roughness:.8, side:THREE.DoubleSide}));
+      ring.rotation.x = -Math.PI/2; g.add(ring);
+      return g;
+    }
+    const carWrap = new THREE.Group();
+    let carMesh = makeFallbackCar();
+    carWrap.add(carMesh);
+    scene.add(carWrap);
+    let track = makeFallbackTrack();
+    scene.add(track);
+    const down = new THREE.Vector3(0,-1,0);
+    const ray = new THREE.Raycaster();
+    ray.far = 220;
+    const nWorld = new THREE.Vector3();
+    const fwd = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    const basis = new THREE.Matrix4();
+    function hitTrack(x, z, fromY){
+      ray.set(new THREE.Vector3(x, fromY, z), down);
+      const hits = ray.intersectObject(track, true);
+      for (const h of hits){
+        if (!h.face) continue;
+        nWorld.copy(h.face.normal).transformDirection(h.object.matrixWorld).normalize();
+        if (nWorld.y > 0.28) return h;
+      }
+      return null;
+    }
+    function snapToAsphalt(x, z, fallbackY){
+      const h = hitTrack(x, z, 160) || hitTrack(x, z, 40);
+      if (!h) return { y: fallbackY, n: new THREE.Vector3(0,1,0), on:false };
+      nWorld.copy(h.face.normal).transformDirection(h.object.matrixWorld).normalize();
+      return { y: h.point.y, n: nWorld.clone(), on:true };
+    }
+    function findSpawn(){
+      const tries = [[0,18],[0,28],[0,38],[12,22],[-12,22],[18,8],[-18,8],[0,8],[8,-12]];
+      for (const [x,z] of tries){
+        const p = snapToAsphalt(x,z,0);
+        if (p.on) return {x,z,y:p.y};
+      }
+      return {x:0,z:28,y:0};
+    }
+    const s = { pos: new THREE.Vector3(0,0,28), rot: 0, speed: 0, idleTime: 0, idleAngle: 0, onTrack:false };
+    const targetQuat = new THREE.Quaternion();
+    const euler = new THREE.Euler(0,0,0,'YXZ');
+
+    // --- multiplayer ---
+    const MP_URL = window.SUBI_MP_URL || 'https://subi-multiplayer.up.railway.app';
+    let socket = null;
+    let mpConnected = false;
+    const remotes = new Map(); // id -> { group, targetPos, targetRot, speed }
+    let localCarTemplate = null;
+
+    function updatePlayersLabel(){
+      const n = remotes.size + (mpConnected ? 1 : 0);
+      playersEl.textContent = mpConnected ? (n + ' ONLINE') : 'OFFLINE';
+    }
+
+    function makeRemoteCar(){
+      if (localCarTemplate) return localCarTemplate.clone(true);
+      return makeFallbackCar();
+    }
+
+    function ensureRemote(id){
+      if (remotes.has(id)) return remotes.get(id);
+      const group = new THREE.Group();
+      group.add(makeRemoteCar());
+      scene.add(group);
+      const entry = { group, targetPos: new THREE.Vector3(), targetRot: 0, speed: 0 };
+      remotes.set(id, entry);
+      updatePlayersLabel();
+      return entry;
+    }
+
+    function removeRemote(id){
+      const e = remotes.get(id);
+      if (!e) return;
+      scene.remove(e.group);
+      remotes.delete(id);
+      updatePlayersLabel();
+    }
+
+    function connectMP(){
+      if (socket || !window.io) return;
+      try {
+        socket = window.io(MP_URL, { transports: ['websocket','polling'], reconnection: true, timeout: 4000 });
+        socket.on('connect', () => { mpConnected = true; updatePlayersLabel(); });
+        socket.on('disconnect', () => { mpConnected = false; updatePlayersLabel(); });
+        socket.on('players', (list) => { (list||[]).forEach(p => applyRemote(p)); });
+        socket.on('join', (p) => applyRemote(p));
+        socket.on('state', (p) => applyRemote(p));
+        socket.on('leave', (p) => removeRemote(p.id));
+      } catch {}
+    }
+
+    function applyRemote(p){
+      if (!p || !p.id || p.id === socket?.id) return;
+      const e = ensureRemote(p.id);
+      e.targetPos.set(p.x, p.y, p.z);
+      e.targetRot = p.rot;
+      e.speed = p.speed || 0;
+    }
+
+    let emitAcc = 0;
+    function emitState(dt){
+      if (!socket || !mpConnected || !running) return;
+      emitAcc += dt;
+      if (emitAcc < 0.066) return; // ~15 Hz
+      emitAcc = 0;
+      socket.emit('state', { x: s.pos.x, y: s.pos.y, z: s.pos.z, rot: s.rot, speed: s.speed });
+    }
+
+    async function mountAssets(){
+      hud.textContent = 'LOADING MESHY GLBS';
+      try {
+        const race = await loadGLB('/glbs/neon-wave-raceway.glb');
+        fit(race, 150);
+        lockTrack(race);
+        scene.remove(track); track = race; scene.add(track);
+        track.updateMatrixWorld(true);
+      } catch {}
+      try {
+        const subi = await loadGLB('/glbs/blue-speedster.glb');
+        fit(subi, 5.2);
+        subi.rotation.y = Math.PI/2;
+        carWrap.remove(carMesh); carMesh = subi; carWrap.add(carMesh);
+        localCarTemplate = subi.clone(true);
+      } catch {}
+      const spawn = findSpawn();
+      s.pos.set(spawn.x, spawn.y, spawn.z);
+      carWrap.position.copy(s.pos);
+      hud.textContent = 'ON TRACK · TAIL CHASE';
+      connectMP();
+    }
+    mountAssets();
+
+    function bind(el){
+      el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); KEYS[el.dataset.k]=true; });
+      el.addEventListener('pointerup', () => { KEYS[el.dataset.k]=false; });
+      el.addEventListener('pointercancel', () => { KEYS[el.dataset.k]=false; });
+    }
+    document.querySelectorAll('.pad').forEach(bind);
+    addEventListener('keydown', e => {
+      if(e.code==='ArrowUp'||e.code==='KeyW') KEYS.fwd=true;
+      if(e.code==='ArrowDown'||e.code==='KeyS') KEYS.back=true;
+      if(e.code==='ArrowLeft'||e.code==='KeyA') KEYS.left=true;
+      if(e.code==='ArrowRight'||e.code==='KeyD') KEYS.right=true;
+      if(e.code==='ShiftLeft'||e.code==='ShiftRight') KEYS.drift=true;
+    });
+    addEventListener('keyup', e => {
+      if(e.code==='ArrowUp'||e.code==='KeyW') KEYS.fwd=false;
+      if(e.code==='ArrowDown'||e.code==='KeyS') KEYS.back=false;
+      if(e.code==='ArrowLeft'||e.code==='KeyA') KEYS.left=false;
+      if(e.code==='ArrowRight'||e.code==='KeyD') KEYS.right=false;
+      if(e.code==='ShiftLeft'||e.code==='ShiftRight') KEYS.drift=false;
+    });
+    document.getElementById('go').onclick = () => {
+      document.getElementById('gate').style.display='none';
+      running = true; dist = 0;
+      const spawn = findSpawn();
+      s.pos.set(spawn.x, spawn.y, spawn.z); s.rot=0; s.speed=0; s.idleTime=0; s.idleAngle=0;
+    };
+    const GAS=45, BRAKE=40, REVERSE=18, DRAG=0.91, TURN=1.6, DRIFT_TURN=TURN*2.4;
+    const CAM_DIST=24, CAM_H=9, LOOK=14, ORBIT=Math.PI+Math.PI/4;
+    let last = performance.now();
+    function tick(now){
+      const delta = Math.min(0.033, (now-last)/1000); last = now;
+      if(running){
+        if (KEYS.fwd) { s.speed = Math.min(s.speed + GAS * delta, 75); s.idleTime = 0; }
+        else if (KEYS.back) {
+          if (s.speed > 1) s.speed = Math.max(s.speed - BRAKE * delta, 0);
+          else s.speed = Math.max(s.speed - REVERSE * delta, -20);
+          s.idleTime = 0;
+        } else {
+          s.speed *= DRAG;
+          if (Math.abs(s.speed) < 0.05) s.speed = 0;
+        }
+        const turning = KEYS.left || KEYS.right;
+        if (Math.abs(s.speed) > 0.5 && turning) {
+          const steerDir = s.speed > 0 ? 1 : -1;
+          const turnRate = KEYS.drift ? DRIFT_TURN : TURN;
+          if (KEYS.left) s.rot += turnRate * delta * steerDir;
+          if (KEYS.right) s.rot -= turnRate * delta * steerDir;
+          s.idleTime = 0;
+        }
+        s.pos.x += Math.sin(s.rot) * s.speed * delta;
+        s.pos.z += Math.cos(s.rot) * s.speed * delta;
+        const surface = snapToAsphalt(s.pos.x, s.pos.z, s.pos.y);
+        s.onTrack = surface.on;
+        if (surface.on) s.pos.y += (surface.y - s.pos.y) * 0.35;
+        if (Math.abs(s.speed) < 0.5 && !turning) s.idleTime += delta;
+        dist += Math.abs(s.speed) * delta;
+        const bestNow = Math.max(best0, Math.floor(dist));
+        localStorage.setItem('subi-best', String(bestNow));
+        scoreEl.innerHTML = Math.floor(dist) + '<br><span style="color:#8ea6b8">BEST '+bestNow+'</span>';
+        hud.textContent = surface.on ? 'ON ASPHALT · TAIL CHASE' : 'OFF TRACK · FIND THE RAMP';
+        fwd.set(Math.sin(s.rot), 0, Math.cos(s.rot));
+        if (surface.on && surface.n.y > 0.35) {
+          right.crossVectors(surface.n, fwd).normalize();
+          fwd.crossVectors(right, surface.n).normalize();
+          basis.makeBasis(right, surface.n, fwd);
+          targetQuat.setFromRotationMatrix(basis);
+        } else {
+          euler.y = s.rot;
+          targetQuat.setFromEuler(euler);
+        }
+        emitState(delta);
+      } else {
+        euler.y = s.rot;
+        targetQuat.setFromEuler(euler);
+      }
+      const isIdle = running && s.idleTime > 3;
+      const bounceY = isIdle ? Math.sin(Date.now() * 0.003) * 0.15 : 0;
+      carWrap.position.set(s.pos.x, s.pos.y + bounceY, s.pos.z);
+      carWrap.quaternion.slerp(targetQuat, 0.18);
+
+      // remote interpolation
+      remotes.forEach(e => {
+        e.group.position.lerp(e.targetPos, 0.25);
+        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, e.targetRot, 0));
+        e.group.quaternion.slerp(q, 0.25);
+      });
+
+      if (isIdle) {
+        s.idleAngle += delta * 0.4;
+        camera.position.x += (s.pos.x + Math.sin(s.idleAngle) * 20 - camera.position.x) * 0.05;
+        camera.position.y += (s.pos.y + 8 - camera.position.y) * 0.05;
+        camera.position.z += (s.pos.z + Math.cos(s.idleAngle) * 20 - camera.position.z) * 0.05;
+      } else {
+        s.idleAngle = 0;
+        const bear = s.rot + ORBIT;
+        camera.position.x += (s.pos.x + Math.sin(bear) * CAM_DIST - camera.position.x) * 0.1;
+        camera.position.y += (s.pos.y + CAM_H - camera.position.y) * 0.1;
+        camera.position.z += (s.pos.z + Math.cos(bear) * CAM_DIST - camera.position.z) * 0.1;
+      }
+      camera.lookAt(s.pos.x + Math.sin(s.rot) * LOOK, s.pos.y + 1.1, s.pos.z + Math.cos(s.rot) * LOOK);
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+    if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  </script>
+</body>
+</html>
